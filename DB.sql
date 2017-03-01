@@ -1,0 +1,14 @@
+
+CREATE TABLE pessoa(
+  idPessoa INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  nomeCompleto VARCHAR (255),
+  nomeCitacao VARCHAR (255)
+);
+
+
+CREATE TABLE artigoARS(
+  idArtigo INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  periodico VARCHAR (255),
+  ano SMALLINT
+);
+
