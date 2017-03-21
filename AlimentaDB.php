@@ -25,6 +25,7 @@
 		
 		function buscaSemelhante($tabela,$coluna,$valor,$idDeRetorno){
 			// CONNECTANDO AO BANCO LOCAL
+			echo "<br> ...... Conectado ao banco de dados ...... <br><br>";
 			$mysqli = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
 			if ($mysqli->connect_errno) {
 				$err = "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error ;
@@ -36,10 +37,10 @@
 			$ret = false;
 			$retAlmost = false;
 			while($row = $query->fetch_assoc()) {
-				$dist = similar_text($row[$coluna], $valor, $percent);
+				similar_text($row[$coluna], $valor, $percent);
 				if($percent >= 90){
-					$ret = $row[$idDeRetorno];
-					echo 'match => id:'.$ret.'<br><br>';
+					$ret = intval($row[$idDeRetorno]);
+
 					break;
 				}elseif($percent > 80 && $percent < 90){
 					$retAlmost = $row;
@@ -50,14 +51,14 @@
 			if($ret == false && $retAlmost != false){
 				$ret = $retAlmost;
 			}
-			return $ret	;		
+			var_dump($ret);
+			return $ret	;
 		}
-	
-		
 
 		// LENDO ARQUIVO CSV 
 		$leuHeader = false;
 		$num = 0;
+		$file = array();
 		if (($handle = fopen("teste1.csv", "r")) !== FALSE) {
 
 			while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
@@ -78,6 +79,7 @@
 		foreach ($file as  $linha) {
 			$authors = array();
 			$i = 0;
+			$periodico = null;
 			foreach ($linha as $value) {
 				$key = explode(' ', $keys[$i]);
 				if($key[0] == "Autor" && $value != ''){
@@ -94,7 +96,7 @@
 			);
 		}
 		
-		echo " <br> ...... Conectado ao banco de dados ...... <br><br>";
+
 		echo "<div>";
 		foreach($arr as $pair){
 			$periodico = $pair['periodico'];
@@ -102,24 +104,28 @@
 			$res = buscaSemelhante('periodico', 'nome', $periodico,'idPeriodico');
 			if($res == false){
 				$mysqli = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
+				$mysqli->set_charset("utf8");
 				if ($mysqli->connect_errno) {
 					$err = "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error ;
 					var_dump($err);
 					die();
 				}
 				if ($mysqli->query('INSERT INTO periodico (nome) VALUES ("'.$periodico.'")')) {
-					echo 'Periodico inserido id: '. $periodicoID.'<br><br>';
 					$periodicoID = $mysqli->insert_id;
+					//echo 'Periodico inserido id: '. $periodicoID.'<br><br>';
 				}else{
 					echo 'Nao foi possivel adicionar o periodico, saindo com erro : '.$mysqli->error.'<br><br>';
 				}
 			}elseif(is_int($res)){
 				$periodicoID = $res;
-				echo 'periodico encontrado id: '.$periodicoID.'<br><br>';
+				//echo 'periodico encontrado id: '.$periodicoID.'<br><br>';
 			}elseif(is_array($res)){
 				echo 'Similaridade encontrada mas nao foi sufiente para substituir automaticamente por favor verifique <br><br>';
 				print_r($res);
 				die();
+			}else{
+				var_dump($res);
+				echo "nada foi feito";
 			}
 		}
 		echo "</div>";
