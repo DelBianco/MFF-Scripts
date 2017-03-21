@@ -1,7 +1,7 @@
--- DROP TABLE pessoaArtigo;
--- DROP TABLE artigoARS;
--- DROP TABLE pessoa;
--- DROP TABLE periodico;
+ DROP TABLE pessoaArtigo;
+ DROP TABLE artigoARS;
+ DROP TABLE pessoa;
+ DROP TABLE periodico;
 
 CREATE TABLE pessoa(
   idPessoa INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

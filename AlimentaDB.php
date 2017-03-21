@@ -25,15 +25,14 @@
 		
 		function buscaSemelhante($tabela,$coluna,$valor,$idDeRetorno){
 			// CONNECTANDO AO BANCO LOCAL
-			echo "<br> ...... Conectado ao banco de dados ...... <br><br>";
-			$mysqli = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
-			if ($mysqli->connect_errno) {
-				$err = "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error ;
+			$mysqli2 = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
+			if ($mysqli2->connect_errno) {
+				$err = "Failed to connect to MySQL: (" . $mysqli2->connect_errno . ") " . $mysqli2->connect_error ;
 				var_dump($err);
 				die();
 			}
-			$mysqli->set_charset("utf8");
-			$query = $mysqli->query('SELECT * FROM '.$tabela);
+			$mysqli2->set_charset("utf8");
+			$query = $mysqli2->query('SELECT * FROM '.$tabela);
 			$ret = false;
 			$retAlmost = false;
 			while($row = $query->fetch_assoc()) {
@@ -46,7 +45,7 @@
 					$retAlmost = $row;
 				}
 			}
-			$mysqli->close();
+			$mysqli2->close();
 			
 			if($ret == false && $retAlmost != false){
 				$ret = $retAlmost;
@@ -80,6 +79,7 @@
 			$authors = array();
 			$i = 0;
 			$periodico = null;
+			$ano = null;
 			foreach ($linha as $value) {
 				$key = explode(' ', $keys[$i]);
 				if($key[0] == "Autor" && $value != ''){
@@ -88,46 +88,86 @@
 				if($key[0] == "Periódico" && $value != ''){
 					$periodico = $value;
 				}
+				if($key[0] == "Ano" && $value != ''){
+					$ano = $value;
+				}
 				$i++;
 			}
 			$arr[] = array(
 				'periodico' => $periodico,
+				'ano' => $ano,
 				'autores' => $authors
 			);
 		}
-		
+		echo "<br> ...... Conectado ao banco de dados ...... <br><br>";
+		$mysqli = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
+		$mysqli->set_charset("utf8");
+		if ($mysqli->connect_errno) {
+			$err = "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error ;
+			var_dump($err);
+			die();
+		}
 
 		echo "<div>";
 		foreach($arr as $pair){
 			$periodico = $pair['periodico'];
+			$ano = $pair['ano'];
 			//Antes de inserir busca por um periodico com o nome semelhante 
 			$res = buscaSemelhante('periodico', 'nome', $periodico,'idPeriodico');
+			$periodicoID = null;
 			if($res == false){
-				$mysqli = new mysqli("localhost", "root", "m230889m", "MFF_Scripts");
-				$mysqli->set_charset("utf8");
-				if ($mysqli->connect_errno) {
-					$err = "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error ;
-					var_dump($err);
-					die();
-				}
 				if ($mysqli->query('INSERT INTO periodico (nome) VALUES ("'.$periodico.'")')) {
 					$periodicoID = $mysqli->insert_id;
-					//echo 'Periodico inserido id: '. $periodicoID.'<br><br>';
+					echo 'Periodico inserido id: '. $periodicoID.'<br><br>';
 				}else{
-					echo 'Nao foi possivel adicionar o periodico, saindo com erro : '.$mysqli->error.'<br><br>';
+					echo 'Nao foi possivel adicionar o periodico ('.$periodico.'), saindo com erro : '.$mysqli->error.'<br><br>';
 				}
 			}elseif(is_int($res)){
 				$periodicoID = $res;
-				//echo 'periodico encontrado id: '.$periodicoID.'<br><br>';
+				echo 'periodico encontrado id: '.$periodicoID.'<br><br>';
 			}elseif(is_array($res)){
-				echo 'Similaridade encontrada mas nao foi sufiente para substituir automaticamente por favor verifique <br><br>';
+				echo 'Similaridade encontrada mas nao foi sufiente para substituir automaticamente por favor verifique <br>';
 				print_r($res);
-				die();
 			}else{
+				echo 'erro nao identificado<br><br>';
 				var_dump($res);
-				echo "nada foi feito";
+			}
+			if($periodicoID != null){
+				$artigoID = null;
+				// Inserindo artigo pois cada linha de arr é um artigo
+				if ($mysqli->query('INSERT INTO artigoARS (idPeriodico) VALUES ("'.$periodicoID.'")')) {
+					$artigoID = $mysqli->insert_id;
+					echo 'Artigo inserido id: '. $artigoID.'<br><br>';
+				}else{
+					echo 'Nao foi possivel adicionar o artigo com o periodico ('.$periodicoID.'), saindo com erro : '.$mysqli->error.'<br><br>';
+				}
+				foreach ($pair['autores'] as $autor){
+					$pessoaID = null;
+					$res = buscaSemelhante('pessoa', 'nomeCompleto', $autor,'idPessoa');
+					if($res == false){
+						if ($mysqli->query('INSERT INTO pessoa (nomeCompleto) VALUES ("'.$autor.'")')) {
+							$pessoaID = $mysqli->insert_id;
+							echo 'Pessoa inserida id: '. $pessoaID.'<br><br>';
+						}else{
+							echo 'Nao foi possivel adicionar a pessoa ('.$autor.'), saindo com erro : '.$mysqli->error.'<br><br>';
+						}
+					}elseif(is_int($res)){
+						$pessoaID = $res;
+						echo 'pessoa encontrada id: '.$pessoaID.'<br><br>';
+					}elseif(is_array($res)){
+						echo 'Similaridade encontrada mas nao foi sufiente para substituir automaticamente por favor verifique <br>';
+						print_r($res);
+					}else{
+						echo 'erro nao identificado<br><br>';
+						var_dump($res);
+					}
+					if($pessoaID != null && $artigoID != null){
+						$mysqli->query('INSERT INTO pessoaArtigo (idArtigo,idPessoa,ano) VALUES ('.$artigoID.','.$pessoaID.','.$ano.')');
+					}
+				}
 			}
 		}
+		$mysqli->close();
 		echo "</div>";
 		?>
 		</div>
